@@ -1,8 +1,6 @@
 ##########################
 # KEDRO PROJECT
 
-src/witz/extras/datasets
-
 # ignore all local configuration
 conf/local/**
 !conf/local/.gitkeep
@@ -20,6 +18,10 @@ logs/**
 
 # also keep all .gitkeep files
 !.gitkeep
+
+# also keep the example dataset
+!data/01_raw/*.csv
+
 
 ##########################
 # Common files
@@ -150,11 +152,3 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-
-# telemetry
-
-.telemetry
-
-#  notebooks checkpoints
-
-.ipynb_checkpoints
