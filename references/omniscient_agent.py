@@ -1,5 +1,6 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 
 class OmniscientAgent(object):
     # The agent class with a list of bandit machines' probabilities
@@ -46,14 +47,15 @@ def run_simulation(prob_list, trials, episodes):
 
     # Print and plot results
     for i, prob in enumerate(prob_reward_array):
-        print(f'Prob Bandit {i+1}: {100*np.round(prob / episodes, 2)}')
+        print(f"Prob Bandit {i+1}: {100*np.round(prob / episodes, 2)}")
 
-    print(f'Avg accumulated reward: {np.mean(avg_accumulated_reward_array)}\n')
+    print(f"Avg accumulated reward: {np.mean(avg_accumulated_reward_array)}\n")
 
     plt.plot(avg_accumulated_reward_array)
-    plt.xlabel('Episodes')
-    plt.ylabel('Average accumulated reward')
-    plt.show();
+    plt.xlabel("Episodes")
+    plt.ylabel("Average accumulated reward")
+    plt.show()
+
 
 # Probabilities of getting a positive result from the bandit machines
 prob_list = [0.3, 0.8]
