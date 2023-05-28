@@ -2,73 +2,173 @@
 This is a boilerplate pipeline
 generated using Kedro 0.18.6
 """
-
-import logging
-from typing import Any, Dict, Tuple
+import threading
+import time
 
 import numpy as np
 import pandas as pd
+from flask import Flask, redirect, render_template, request, url_for
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+
+intermediate_file = "data/02_intermediate/update_experiment.csv"
 
 
-def split_data(
-    data: pd.DataFrame, parameters: Dict[str, Any]
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    """Splits data into features and target training and test sets.
+def _update_experiment_data(click: int, visit: int, group: str):
+    df_raw = pd.DataFrame({"click": [click], "visit": [visit], "group": [group]})
+    try:
+        data = pd.read_csv(intermediate_file)
+        data = pd.concat([data, df_raw], ignore_index=True)
+    except FileNotFoundError:
+        data = df_raw
+    data.to_csv(intermediate_file, index=False)
 
-    Args:
-        data: Data containing features and target.
-        parameters: Parameters defined in parameters.yml.
-    Returns:
-        Split data.
+
+def run_flask_app(data_experiment: pd.DataFrame) -> None:
     """
+    Launches a Flask server that displays two different versions of a website,
+    according to a random probability. The server also logs user clicks and updates
+    the 'temp_df' DataFrame with these clicks.
 
-    data_train = data.sample(
-        frac=parameters["train_fraction"], random_state=parameters["random_state"]
-    )
-    data_test = data.drop(data_train.index)
+    Parameters
+    ----------
+    data_experiment : pd.DataFrame
+        Initial DataFrame to be updated with user clicks.
 
-    X_train = data_train.drop(columns=parameters["target_column"])
-    X_test = data_test.drop(columns=parameters["target_column"])
-    y_train = data_train[parameters["target_column"]]
-    y_test = data_test[parameters["target_column"]]
-
-    return X_train, X_test, y_train, y_test
-
-
-def make_predictions(
-    X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.Series
-) -> pd.Series:
-    """Uses 1-nearest neighbour classifier to create predictions.
-
-    Args:
-        X_train: Training data of features.
-        y_train: Training data for target.
-        X_test: Test data for features.
-
-    Returns:
-        y_pred: Prediction of the target variable.
     """
+    app = Flask(__name__, template_folder="../../data/01_raw")
 
-    X_train_numpy = X_train.to_numpy()
-    X_test_numpy = X_test.to_numpy()
+    @app.route("/")
+    def base_route():
+        """
+        Base route that redirects to the index page.
+        """
+        return redirect(url_for("index"))
 
-    squared_distances = np.sum(
-        (X_train_numpy[:, None, :] - X_test_numpy[None, :, :]) ** 2, axis=-1
-    )
-    nearest_neighbour = squared_distances.argmin(axis=0)
-    y_pred = y_train.iloc[nearest_neighbour]
-    y_pred.index = X_test.index
+    @app.route("/home")
+    def index():
+        """
+        Index page route. Selects and renders a template based on a random condition.
+        """
+        # get data
+        try:
+            temp_df = pd.read_csv(intermediate_file)
+        except FileNotFoundError:
+            temp_df = pd.DataFrame(columns=["click", "visit", "group"])
+        temp_df["no_click"] = temp_df["visit"] - temp_df["click"]
+        click_array = (
+            temp_df.groupby("group")
+            .sum()
+            .reset_index()[["click", "no_click"]]
+            .T.to_numpy()
+        )
+        click_array = click_array + 1  # suavização de Laplace
 
-    return y_pred
+        # Thompson Agent
+        prob_reward = np.random.beta(click_array[0], click_array[1])
+
+        if np.argmax(prob_reward) == 0:
+            selected_template = render_template("pg_layout_blue.html")
+        else:
+            selected_template = render_template("pg_layout_red.html")
+        return selected_template
+
+    @app.route("/yes", methods=["POST"])
+    def yes_event():
+        """
+        Route for the 'yes' event. Updates the experiment data and
+        redirects to the index page.
+        """
+        if request.form["yescheckbox"] == "red":
+            group = "treatment"
+        else:
+            group = "control"
+        _update_experiment_data(click=1, visit=1, group=group)
+
+        return redirect(url_for("index"))
+
+    @app.route("/no", methods=["POST"])
+    def no_event():
+        """
+        Route for the 'no' event. Updates the experiment data and
+        redirects to the index page.
+        """
+        if request.form["nocheckbox"] == "red":
+            group = "treatment"
+        else:
+            group = "control"
+        _update_experiment_data(click=0, visit=1, group=group)
+
+        return redirect(url_for("index"))
+
+    def shutdown_server():
+        func = request.environ.get("werkzeug.server.shutdown")
+        if func is None:
+            raise RuntimeError("Not running with the Werkzeug Server")
+        func()
+
+    @app.route("/shutdown", methods=["POST"])
+    def shutdown():
+        """
+        Route for shutting down the server.
+        """
+        shutdown_server()
+        return "Server shutting down..."
+
+    app.run()
 
 
-def report_accuracy(y_pred: pd.Series, y_test: pd.Series):
-    """Calculates and logs the accuracy.
-
-    Args:
-        y_pred: Predicted target.
-        y_test: True target.
+def run_scrapper() -> None:
     """
-    accuracy = (y_pred == y_test).sum() / len(y_test)
-    logger = logging.getLogger(__name__)
-    logger.info("Model has accuracy of %.3f on test data.", accuracy)
+    Starts a web scrapper that automates navigation on the website served by the
+    Flask server. The scrapper 'clicks' on the "yes" or "no" buttons on the website,
+    according to a random probability.
+    """
+    time.sleep(2)  # Give Flask server some time to start
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
+
+    driver.get("http://127.0.0.1:5000/home")
+
+    clicks = 50
+    for click in range(clicks):
+        if np.random.random() < 0.3:
+            driver.find_element("name", "yescheckbox").click()
+            driver.find_element("id", "yesbtn").click()
+            time.sleep(2)
+        else:
+            driver.find_element("name", "nocheckbox").click()
+            driver.find_element("id", "nobtn").click()
+            time.sleep(2)
+
+    driver.quit()
+    driver.get("http://127.0.0.1:5000/shutdown")
+    driver.close()
+
+    return None
+
+
+def run_flask_app_and_scrapper(data_experiment: pd.DataFrame) -> None:
+    """
+    Starts both the Flask server and the web scrapper concurrently.
+
+    Parameters
+    ----------
+    data_experiment : pd.DataFrame
+        Initial DataFrame to be updated with user clicks.
+
+    Returns
+    -------
+    None
+    """
+    flask_thread = threading.Thread(target=run_flask_app, args=(data_experiment,))
+    # scraper_thread = threading.Thread(target=run_scrapper)
+
+    flask_thread.start()
+    # scraper_thread.start()
+
+    # scraper_thread.join()
+
+    return None
