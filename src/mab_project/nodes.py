@@ -132,16 +132,27 @@ def run_scrapper() -> None:
 
     driver.get("http://127.0.0.1:5000/home")
 
-    clicks = 50
+    clicks = 150 # passar em parametros
     for click in range(clicks):
-        if np.random.random() < 0.3:
-            driver.find_element("name", "yescheckbox").click()
-            driver.find_element("id", "yesbtn").click()
-            time.sleep(2)
+        button_collor = driver.find_element("name", "yescheckbox").get_attribute("vale")
+        if button_collor == "blue":
+            if np.random.random() < 0.3:
+                driver.find_element("name", "yescheckbox").click()
+                driver.find_element("id", "yesbtn").click()
+                time.sleep(2)
+            else:
+                driver.find_element("name", "nocheckbox").click()
+                driver.find_element("id", "nobtn").click()
+                time.sleep(2)
         else:
-            driver.find_element("name", "nocheckbox").click()
-            driver.find_element("id", "nobtn").click()
-            time.sleep(2)
+            if np.random.random() < 0.35:
+                driver.find_element("name", "yescheckbox").click()
+                driver.find_element("id", "yesbtn").click()
+                time.sleep(2)
+            else:
+                driver.find_element("name", "nocheckbox").click()
+                driver.find_element("id", "nobtn").click()
+                time.sleep(2)
 
     driver.quit()
     driver.get("http://127.0.0.1:5000/shutdown")
@@ -164,11 +175,11 @@ def run_flask_app_and_scrapper(data_experiment: pd.DataFrame) -> None:
     None
     """
     flask_thread = threading.Thread(target=run_flask_app, args=(data_experiment,))
-    # scraper_thread = threading.Thread(target=run_scrapper)
+    scraper_thread = threading.Thread(target=run_scrapper)
 
     flask_thread.start()
-    # scraper_thread.start()
+    scraper_thread.start()
 
-    # scraper_thread.join()
+    scraper_thread.join()
 
     return None
