@@ -25,6 +25,20 @@ def _update_experiment_data(click: int, visit: int, group: str):
     data.to_csv(intermediate_file, index=False)
 
 
+def _handle_event(click: int, type_box: str):
+    """
+    Handles both 'yes' and 'no' events. Updates the experiment data.
+
+    Parameters
+    ----------
+    click : int
+        1 for 'yes' event, 0 for 'no' event.
+    """
+    group = "treatment" if request.form[type_box] == "red" else "control"
+    _update_experiment_data(click=click, visit=1, group=group)
+    return redirect(url_for("index"))
+
+
 def run_flask_app(data_experiment: pd.DataFrame) -> None:
     """
     Launches a Flask server that displays two different versions of a website,
@@ -56,6 +70,7 @@ def run_flask_app(data_experiment: pd.DataFrame) -> None:
             temp_df = pd.read_csv(intermediate_file)
         except FileNotFoundError:
             temp_df = pd.DataFrame(columns=["click", "visit", "group"])
+
         temp_df["no_click"] = temp_df["visit"] - temp_df["click"]
         click_array = (
             temp_df.groupby("group")
@@ -63,7 +78,7 @@ def run_flask_app(data_experiment: pd.DataFrame) -> None:
             .reset_index()[["click", "no_click"]]
             .T.to_numpy()
         )
-        click_array = click_array + 1  # suavização de Laplace
+        click_array = click_array + 1  # Laplace smoothing
 
         # Thompson Agent
         prob_reward = np.random.beta(click_array[0], click_array[1])
@@ -77,30 +92,16 @@ def run_flask_app(data_experiment: pd.DataFrame) -> None:
     @app.route("/yes", methods=["POST"])
     def yes_event():
         """
-        Route for the 'yes' event. Updates the experiment data and
-        redirects to the index page.
+        Route for the 'yes' event.
         """
-        if request.form["yescheckbox"] == "red":
-            group = "treatment"
-        else:
-            group = "control"
-        _update_experiment_data(click=1, visit=1, group=group)
-
-        return redirect(url_for("index"))
+        return _handle_event(click=1, type_box="yescheckbox")
 
     @app.route("/no", methods=["POST"])
     def no_event():
         """
-        Route for the 'no' event. Updates the experiment data and
-        redirects to the index page.
+        Route for the 'no' event.
         """
-        if request.form["nocheckbox"] == "red":
-            group = "treatment"
-        else:
-            group = "control"
-        _update_experiment_data(click=0, visit=1, group=group)
-
-        return redirect(url_for("index"))
+        return _handle_event(click=0, type_box="nocheckbox")
 
     def shutdown_server():
         func = request.environ.get("werkzeug.server.shutdown")
