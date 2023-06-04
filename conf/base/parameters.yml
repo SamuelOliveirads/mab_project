@@ -1,3 +1,2 @@
-train_fraction: 0.8
-random_state: 3
-target_column: species
+# Defines the number of interactions to be made on the test pages
+scrapper_cycles: 50

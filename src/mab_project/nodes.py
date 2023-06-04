@@ -119,7 +119,7 @@ def run_flask_app(data_experiment: pd.DataFrame) -> None:
     app.run()
 
 
-def run_scrapper() -> None:
+def run_scrapper(scrapper_cycles: int) -> None:
     """
     Starts a web scrapper that automates navigation on the website served by the
     Flask server. The scrapper 'clicks' on the "yes" or "no" buttons on the website,
@@ -132,7 +132,7 @@ def run_scrapper() -> None:
 
     driver.get("http://127.0.0.1:5000/home")
 
-    clicks = 150 # passar em parametros
+    clicks = scrapper_cycles
     for click in range(clicks):
         button_collor = driver.find_element("name", "yescheckbox").get_attribute("vale")
         if button_collor == "blue":
@@ -161,7 +161,9 @@ def run_scrapper() -> None:
     return None
 
 
-def run_flask_app_and_scrapper(data_experiment: pd.DataFrame) -> None:
+def run_flask_app_and_scrapper(
+    data_experiment: pd.DataFrame, scrapper_cycles: int
+) -> None:
     """
     Starts both the Flask server and the web scrapper concurrently.
 
@@ -175,7 +177,7 @@ def run_flask_app_and_scrapper(data_experiment: pd.DataFrame) -> None:
     None
     """
     flask_thread = threading.Thread(target=run_flask_app, args=(data_experiment,))
-    scraper_thread = threading.Thread(target=run_scrapper)
+    scraper_thread = threading.Thread(target=run_scrapper, args=(scrapper_cycles,))
 
     flask_thread.start()
     scraper_thread.start()

@@ -13,7 +13,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             node(
                 func=run_flask_app_and_scrapper,
-                inputs="data_experiment",
+                inputs=["data_experiment", "params:scrapper_cycles"],
                 outputs=None,
                 name="run_flask_app_and_scrapper",
             ),
