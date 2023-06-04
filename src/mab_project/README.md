@@ -1,70 +1,93 @@
-# Pipeline
-
-> *Note:* This is a `README.md` boilerplate generated using `Kedro 0.18.6`.
+# Pipeline 1: Flask Server and Web Scraper
 
 ## Overview
 
 This pipeline:
-1. splits the data into training dataset and testing dataset using a configurable ratio found in `conf/base/parameters.yml`
-2. runs a simple 1-nearest neighbour model (`make_prediction` node) and makes prediction dataset
-3. reports the model accuracy on a test set (`report_accuracy` node)
+
+1. Starts a Flask server that displays two versions of a website based on a random probability (`run_flask_app` node). The server also logs user clicks and updates a DataFrame with these clicks.
+2. Starts a web scraper that automates navigation on the website served by the Flask server (`run_scrapper` node). The scraper 'clicks' on the "yes" or "no" buttons on the website, according to a random probability.
+3. Runs both the Flask server and the web scraper concurrently (`run_flask_app_and_scrapper` node).
 
 ## Pipeline inputs
 
-### `example_iris_data`
+### `data_experiment`
 
 |      |                    |
 | ---- | ------------------ |
-| Type | `pandas.CSVDataSet` |
-| Description | Example iris data containing columns |
+| Type | `pandas.DataFrame` |
+| Description | Initial DataFrame to be updated with user clicks. |
 
-
-### `parameters`
+### `scrapper_cycles`
 
 |      |                    |
 | ---- | ------------------ |
-| Type | `dict` |
-| Description | Project parameter dictionary that must contain the following keys: `train_fraction` (the ratio used to determine the train-test split), `random_state` (random generator to ensure train-test split is deterministic) and `target_column` (identify the target column in the dataset) |
-
+| Type | `int` |
+| Description | Number of cycles the web scraper should perform. |
 
 ## Pipeline intermediate outputs
 
-### `X_train`
-
-|      |                    |
-| ---- | ------------------ |
-| Type | `pandas.DataFrame` |
-| Description | DataFrame containing train set features |
-
-### `y_train`
-
-|      |                    |
-| ---- | ------------------ |
-| Type | `pandas.Series` |
-| Description | Series containing train set target. |
-
-### `X_test`
-
-|      |                    |
-| ---- | ------------------ |
-| Type | `pandas.DataFrame` |
-| Description | DataFrame containing test set features |
-
-### `y_test`
-
-|      |                    |
-| ---- | ------------------ |
-| Type | `pandas.Series` |
-| Description | Series containing test set target |
-
-### `y_pred`
-
-|      |                    |
-| ---- | ------------------ |
-| Type | `pandas.Series` |
-| Description | Predictions from the 1-nearest neighbour model |
-
+None
 
 ## Pipeline outputs
 
-### `None`
+None
+
+# Pipeline 2: Bayesian Inference and Plotting
+
+## Overview
+
+This pipeline:
+
+1. Loads and pre-processes the data for Bayesian inference (`load_and_process_data` node).
+2. Executes Bayesian inference on the data (`bayesian_inference` node).
+3. Creates an animation of the results of the Bayesian inference (`animate_plot` node).
+
+## Pipeline inputs
+
+### `data_path`
+
+|      |                    |
+| ---- | ------------------ |
+| Type | `pathlib.Path` |
+| Description | The path to the data file. |
+
+### `day`
+
+|      |                    |
+| ---- | ------------------ |
+| Type | `int` |
+| Description | The current day in the dataset. |
+
+### `group`
+
+|      |                    |
+| ---- | ------------------ |
+| Type | `str` |
+| Description | The group (either 'a' or 'b'). |
+
+## Pipeline intermediate outputs
+
+### `data`
+
+|      |                    |
+| ---- | ------------------ |
+| Type | `pandas.DataFrame` |
+| Description | DataFrame containing the pre-processed data. |
+
+### `samples_normal, beta_pdf, normal_pdf`
+
+|      |                    |
+| ---- | ------------------ |
+| Type | `tuple` |
+| Description | A tuple containing the samples, beta_pdf values, and normal_pdf values. |
+
+### `proba_b_better_a, expected_loss_a, expected_loss_b`
+
+|      |                    |
+| ---- | ------------------ |
+| Type | `tuple` |
+| Description | A tuple containing the probabilities and expected losses. |
+
+## Pipeline outputs
+
+None
