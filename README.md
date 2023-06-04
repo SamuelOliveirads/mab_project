@@ -33,6 +33,16 @@ You can run your Kedro project with:
 kedro run
 ```
 
+then for analysis move for the folder:
+
+```
+cd /src/mab_project
+```
+And then use the command:
+```
+python analytics.py
+```
+
 ## How to test your Kedro project
 
 Have a look at the file `src/tests/test_run.py` for instructions on how to write your tests. You can run your tests as follows:
