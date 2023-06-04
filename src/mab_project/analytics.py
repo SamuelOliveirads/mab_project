@@ -15,20 +15,23 @@ DATA_PATH = Path("../../data/02_intermediate/update_experiment.csv")
 def calculate_stats_and_samples(
     data: pd.DataFrame, day: int, group: str
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    proba_b_better_a = []
-    expected_loss_a =[]
-    expected_loss_b =[]
+    """
+    Calculate statistics and draw samples for a given group.
 
-    for day in range(len(data)):
-        u_a, var_a = stats.beta.stats(a=1+data.loc[day, 'acc_clicks_a'],
-                                      b=1+data.loc[day, 'acc_visits_a']- data.loc[day, 'acc_clicks_a'], moments='mv')
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data frame containing the data.
+    day : int
+        The current day.
+    group : str
+        The group (either 'a' or 'b').
 
-        u_b, var_b = stats.beta.stats(a=1+data.loc[day, 'acc_clicks_b'],
-                                      b=1+data.loc[day, 'acc_visits_b']- data.loc[day, 'acc_clicks_b'], moments='mv')
-        
-        # Draw samples from normal distributions for both groups
-        x_a = np.random.normal(loc=u_a, scale=1.25*np.sqrt(var_a), size=N_mc)
-        x_b = np.random.normal(loc=u_b, scale=1.25*np.sqrt(var_b), size=N_mc)
+    Returns
+    -------
+    tuple
+        A tuple containing the samples, beta_pdf values, and normal_pdf values.
+    """
     beta_mean, beta_variance = stats.beta.stats(
         a=1 + data.loc[day, f"acc_clicks_{group}"],
         b=1
@@ -58,9 +61,19 @@ def calculate_stats_and_samples(
 
 
 def bayesian_inference(data: pd.DataFrame) -> Tuple[list, list, list]:
-        gb = stats.norm.pdf(x_b,
-                            loc=u_b,
-                            scale=1.25*np.sqrt(var_b))
+    """
+    Perform Bayesian inference on the data.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data frame containing the data.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the probabilities and expected losses.
+    """
     prob_b_better_than_a_list = []
     expected_loss_a_list = []
     expected_loss_b_list = []
@@ -97,15 +110,19 @@ def bayesian_inference(data: pd.DataFrame) -> Tuple[list, list, list]:
 
 
 def load_and_process_data(data_path: Path) -> pd.DataFrame:
-        proba_b_better_a.append(p)
-        expected_loss_a.append(expected_loss_A)
-        expected_loss_b.append(expected_loss_B)
-    
-    return proba_b_better_a, expected_loss_a, expected_loss_b
+    """
+    Load and preprocess data for the Bayesian inference animation.
 
+    Parameters
+    ----------
+    data_path : Path
+        The path to the data file.
 
-def animate_plot(data_experiment):
-    data = pd.read_csv("../../data/02_intermediate/update_experiment.csv")
+    Returns
+    -------
+    pd.DataFrame
+        The preprocessed data frame.
+    """
     data = pd.read_csv(data_path)
 
     data["click"] = data["click"].astype(int)
@@ -132,12 +149,16 @@ def animate_plot(data_experiment):
 
 
 def animate_plot(i: int, data: pd.DataFrame):
-    
-    data['acc_visits_a'] = data['visit_control'].cumsum()
-    data['acc_clicks_a'] = data['click_control'].cumsum()
+    """
+    Create an animation of the Bayesian inference results.
 
-    data['acc_visits_b'] = data['visit_treatment'].cumsum()
-    data['acc_clicks_b'] = data['click_treatment'].cumsum()
+    Parameters
+    ----------
+    i : int
+        Current frame number (ignored).
+    data_experiment : pd.DataFrame
+        The data frame containing the data.
+    """
 
     # inferencet bayesian
     prob_b_better_than_a, expected_loss_a, expected_loss_b = bayesian_inference(data)
